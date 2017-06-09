@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Vue-todoList</title>
+    <link rel="stylesheet" href="./bootstrap.css">
+    <style>
+        .del {
+            text-decoration: line-through;
+            color: #cccccc;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="navbar navbar-inverse">
+        <div class="container">
+            <div class="navbar-header">
+                <a href="" class="navbar-brand">Todo List</a>
+            </div>
+            <!--下面可以放置导航-->
+        </div>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h3 class="text-danger">你还有 <span style="color: blue">{{ todoCount }} </span>件事要完成</h3>
+                <input type="text" class="form-control" placeholder="请输入要添加的事项" v-model="newTodo" @keyup.enter="addTodo">
+                <ul class="nav nav-pills" style="margin:10px 0;">
+                    <li :class="{active:hash==='all'}"><a href="#all">全部事项</a></li>
+                    <li :class="{active:hash==='finish'}"><a href="#finish">已完成</a></li>
+                    <li :class="{active:hash==='unfinish'}"><a href="#unfinish">未完成</a></li>
+                </ul>
+                <ul class="list-group">
+                    <!--del类可以让当前项变灰-->
+                    <li class="list-group-item" v-for="todo in lists" :class="{'del':todo.isSelected}"
+                        @dblclick="change(todo)">
+                        <div v-show="todo !== t">
+                            <input type="checkbox" v-model="todo.isSelected">
+                            {{ todo.title }}
+                            <button class="btn btn-danger btn-xs pull-right" @click="deleteTodo(todo)">删除</button>
+                        </div>
+                        <!--默认无法自动获取焦点 需要加 autofocus="true" 并且页面中只有一个input会获取焦点-->
+                        <input type="text" v-show="todo === t" v-model="todo.title" class="form-control"
+                               @keyup.enter="reset" @blur="reset" v-auto-focus="todo === t">
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="./vue.js"></script>
+<script type="text/javascript">
+    let vm = new Vue({
+        el: '#app',
+        data: {
+            newTodo: '',
+            hash: 'all',
+            t: null,
+            todos: [{isSelected: true, title: '中午吃饭'},
+                {isSelected: false, title: '中午打桌球'},
+                {isSelected: false, title: '中午玩王者'},
+                {isSelected: false, title: '中午午睡'}]
+        },
+        created(){//vue实例创建的时候就执行这个方法,获取到本地存储的数据
+            let data = JSON.parse(localStorage.getItem('todos'));
+            Boolean(data) ? this.todos = data : null;
+        },
+        methods: {
+            deleteTodo(todo){
+                this.todos = this.todos.filter((item) => item !== todo);
+            },
+            addTodo(){
+                if (this.newTodo === '')return;
+                this.todos.push({isSelected: false, title: this.newTodo});
+                this.newTodo = '';
+            },
+            change(todo){
+                this.t = todo;
+            },
+            reset(){
+                if(this.t === null)return;
+                if(this.t.title === ''){
+                    this.todos = this.todos.filter((item) => item !== this.t);
+                }
+                this.t = null;
+            }
+        },
+        watch: {//watch默认值监听一层,例如todos可以监听数组的变化,  监听不到对象的变化,需要深度监听,需要添加属性deep: true
+            todos: {
+                handler(){
+                    localStorage.setItem('todos', JSON.stringify(this.todos));
+                },
+                deep: true
+            }
+        },
+        computed: {
+            todoCount(){
+                return this.todos.filter(item => !item.isSelected).length;
+            },
+            lists(){
+                if (this.hash === 'all') {
+                    return this.todos;
+                } else if (this.hash === 'finish') {
+                    return this.todos.filter(item => item.isSelected);
+                } else if (this.hash === 'unfinish') {
+                    return this.todos.filter(item => !item.isSelected);
+                }
+            }
+        },
+        directives: {//自定义指令(注册指令)
+            autoFocus(el, bindings){//el是使用指令的元素,bindings中有一个value属性代表的是指令对应的值
+                if (bindings.value) {
+                    el.focus();
+                }
+            }
+        }
+
+    });
+    let listener = () => {
+        vm.hash = window.location.hash.slice(1) || 'all';//如果没有得到hash默认是all
+    };
+    listener();//页面一加载就获取hash,否则可能或跳转到默认hash
+    window.addEventListener('hashchange', listener, false);
+</script>
+</body>
+</html>
